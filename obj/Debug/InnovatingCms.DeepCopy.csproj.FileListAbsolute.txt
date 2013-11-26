@@ -1,0 +1,11 @@
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\bin\InnovatingCms.DeepCopy.dll.config
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\bin\InnovatingCms.DeepCopy.dll
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\bin\InnovatingCms.DeepCopy.pdb
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\bin\Sitecore.Kernel.dll
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\bin\Sitecore.Zip.dll
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\bin\Sitecore.Logging.dll
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\bin\Sitecore.NVelocity.dll
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\bin\Sitecore.Kernel.xml
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\obj\Debug\InnovatingCms.DeepCopy.csprojResolveAssemblyReference.cache
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\obj\Debug\InnovatingCms.DeepCopy.dll
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\obj\Debug\InnovatingCms.DeepCopy.pdb

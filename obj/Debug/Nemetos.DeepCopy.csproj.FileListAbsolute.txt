@@ -1,0 +1,11 @@
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\bin\Sitecore.Kernel.dll
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\bin\Sitecore.Zip.dll
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\bin\Sitecore.Logging.dll
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\bin\Sitecore.NVelocity.dll
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\bin\Sitecore.Kernel.xml
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\obj\Debug\Nemetos.DeepCopy.csprojResolveAssemblyReference.cache
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\bin\Nemetos.DeepCopy.dll.config
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\bin\Nemetos.DeepCopy.dll
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\bin\Nemetos.DeepCopy.pdb
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\obj\Debug\Nemetos.DeepCopy.dll
+F:\Dev\User Manager\InnovatingCms.UserManager\InnovatingCms.DeepCopy\obj\Debug\Nemetos.DeepCopy.pdb
