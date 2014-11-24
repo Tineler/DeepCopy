@@ -4,6 +4,7 @@
     using Sitecore.Data;
     using Sitecore.Data.Items;
     using Sitecore.Diagnostics;
+    using Sitecore.Globalization;
     using Sitecore.Shell.Framework;
     using Sitecore.Shell.Framework.Commands;
     using Sitecore.Shell.Framework.Pipelines;
@@ -62,26 +63,34 @@
             Assert.ArgumentNotNull((object)items, "items");
             if (items.Length <= 0)
                 return;
-            Start("uiDeepCopyItems", (ClientPipelineArgs)new CopyItemsArgs(), items[0].Database, items);
+            Start("uiDeepCopyItems", (ClientPipelineArgs)new CopyItemsArgs(), items[0].Database, items[0].Language, items);
         }
+
         /// <summary>
         /// Starts the specified pipeline name.
         /// 
         /// </summary>
-        /// <param name="pipelineName">Name of the pipeline.</param><param name="args">The arguments.</param><param name="database">The database.</param><param name="items">The items.</param>
+        /// <param name="pipelineName">Name of the pipeline.</param>
+        /// <param name="args">The arguments.</param>
+        /// <param name="database">The database.</param>
+        /// <param name="language">The language.</param>
+        /// <param name="items">The items.</param>
         /// <returns/>
-        private static NameValueCollection Start(string pipelineName, ClientPipelineArgs args, Database database, Item[] items)
+        private static NameValueCollection Start(string pipelineName, ClientPipelineArgs args, Database database, Language language, Item[] items)
         {
             Assert.ArgumentNotNullOrEmpty(pipelineName, "pipelineName");
             Assert.ArgumentNotNull((object)args, "args");
             Assert.ArgumentNotNull((object)database, "database");
             Assert.ArgumentNotNull((object)items, "items");
+            Assert.ArgumentNotNull(language, "language");
+
             NameValueCollection nameValueCollection = new NameValueCollection();
             ListString listString = new ListString('|');
             for (int index = 0; index < items.Length; ++index)
                 listString.Add(items[index].ID.ToString());
             nameValueCollection.Add("database", database.Name);
             nameValueCollection.Add("items", listString.ToString());
+            nameValueCollection.Add("language", language.CultureInfo.TwoLetterISOLanguageName);
             args.Parameters = nameValueCollection;
             Context.ClientPage.Start(pipelineName, args);
             return nameValueCollection;
