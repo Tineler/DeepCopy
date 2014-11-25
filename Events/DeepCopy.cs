@@ -1,24 +1,37 @@
-﻿using Sitecore.Configuration;
-using Sitecore.Data;
-using Sitecore.Data.Items;
-using Sitecore.Diagnostics;
-using Sitecore.SecurityModel;
-using Sitecore.Shell.Framework.Pipelines;
-using Sitecore.Text;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using System.Xml;
-
-namespace Nemetos.DeepCopy.Events
+﻿namespace Nemetos.DeepCopy.Events
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Xml;
+
+    using Sitecore.Configuration;
+    using Sitecore.Data;
+    using Sitecore.Data.Fields;
+    using Sitecore.Data.Items;
+    using Sitecore.Diagnostics;
+    using Sitecore.Events;
+    using Sitecore.SecurityModel;
+    using Sitecore.Shell.Framework.Pipelines;
+    using Sitecore.Text;
+
+    /// <summary>
+    /// The deep copy.
+    /// </summary>
     public class DeepCopy
     {
         /// <summary>
+        /// Gets or sets database to work with from configuration (only used for event handlers).
+        /// </summary>
+        public string Database
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
         /// Fix the datasource for the copying items
-        /// 
         /// </summary>
         /// <param name="args">The arguments.</param><contract><requires name="args" condition="not null"/></contract>
         public virtual void Execute(CopyItemsArgs args)
@@ -54,91 +67,233 @@ namespace Nemetos.DeepCopy.Events
 
             args.Copies = new ArrayList().ToArray(typeof(Item)) as Item[];
         }
+
+        /// <summary>
+        /// The on item added.
+        /// </summary>
+        /// <param name="sender">
+        /// The sender.
+        /// </param>
+        /// <param name="args">
+        /// The args.
+        /// </param>
+        public void OnItemAdded(object sender, EventArgs args)
+        {
+            var item = Event.ExtractParameter(args, 0) as Item;
+
+            if (item == null || item.Database == null)
+            {
+                return;
+            }
+
+            if (string.CompareOrdinal(item.Database.Name, this.Database) != 0)
+            {
+                return;
+            }
+
+            // check if the branch-item (or better - the child of the Branch-Item) even has sublayouts with assigned datasources - old ones don't - let them alone
+            if (item.Branch != null && item.Branch.InnerItem != null && item.Branch.InnerItem.HasChildren && item.Branch.InnerItem.Children.Count == 1 && item.Branch.InnerItem.Children[0] != null)
+            { // usually branches have just one child - for now, just handle these
+                var branchChild = item.Branch.InnerItem.Children[0];
+                FixDataSource(branchChild, item, null);
+
+                // copy all languages if enabled (and only if the event is fired on the topmost item that was created
+                if (item.TemplateID.ToString() == branchChild.TemplateID.ToString() && !string.IsNullOrEmpty(item.Branch.InnerItem["Create All Language Versions"]) && item.Branch.InnerItem["Create All Language Versions"] == "1")
+                {
+                    CopyLanguageVersions(branchChild, item);
+                }
+            }
+        }
+
+        /// <summary>
+        /// copies all existing language versions from the branch template to the newly created items
+        /// </summary>
+        /// <param name="branchRootItem">The branch root item.</param>
+        /// <param name="targetRootItem">The target root item.</param>
+        private static void CopyLanguageVersions(Item branchRootItem, Item targetRootItem)
+        {
+            Assert.ArgumentNotNull(branchRootItem, "branchRootItem");
+            Assert.ArgumentNotNull(targetRootItem, "targetRootItem");
+
+            var items = targetRootItem.Branch.InnerItem.Axes.GetDescendants();
+
+            if (items == null || items.Length <= 0)
+            {
+                return;
+            }
+
+            var branchRootPath = branchRootItem.Paths.FullPath;
+            var targetRootPath = targetRootItem.Paths.FullPath;
+
+            foreach (var sourceItem in items)
+            {
+                if (sourceItem == null)
+                {
+                    continue;
+                }
+
+                var targetItem = sourceItem.Database.GetItem(targetRootPath + sourceItem.Paths.FullPath.Replace(branchRootPath, string.Empty));
+                if (targetItem == null)
+                {
+                    continue;
+                }
+
+                foreach (var lang in sourceItem.Languages)
+                {
+                    var branchVersion = sourceItem.Versions.GetLatestVersion(lang);
+                    var targetVersion = targetItem.Versions.GetLatestVersion(lang);
+                    if (branchVersion == null || targetVersion == null || branchVersion.Versions.Count <= 0
+                        || targetVersion.Versions.Count != 0)
+                    {
+                        continue;
+                    }
+
+                    targetVersion.Versions.AddVersion();
+                    targetVersion = targetItem.Versions.GetLatestVersion(lang);
+                    var wasNotInEditMode = false;
+
+                    if (!targetVersion.Editing.IsEditing)
+                    {
+                        targetVersion.Editing.BeginEdit();
+                        wasNotInEditMode = true;
+                    }
+
+                    foreach (Field field in branchVersion.Fields)
+                    {
+                        if (!field.Shared)
+                        {
+                            targetVersion[field.Name] = branchVersion[field.Name];
+                        }
+                    }
+
+                    if (wasNotInEditMode)
+                    {
+                        targetVersion.Editing.EndEdit();
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// Return the current Database 
         /// </summary>
-        /// <param name="args"></param>
-        /// <returns></returns>
-        private Database GetDatabase(CopyItemsArgs args)
+        /// <param name="args">The args.</param>
+        /// <returns>The database.</returns>
+        private static Database GetDatabase(CopyItemsArgs args)
         {
-            string str = args.Parameters["database"];
-            Database database = Factory.GetDatabase(str);
-            Assert.IsNotNull((object)database, str);
+            if (args == null)
+            {
+                Database db;
+                try
+                {
+                    db = Factory.GetDatabase("master");
+                }
+                catch
+                {
+                    db = Factory.GetDatabase("web");
+                }
+
+                return db;
+            }
+
+            var str = args.Parameters["database"];
+            var database = Factory.GetDatabase(str);
+            Assert.IsNotNull(database, str);
             return database;
         }
 
         /// <summary>
         /// Gets the items.
-        /// 
         /// </summary>
         /// <param name="args">The arguments.</param>
         /// <returns>
         /// The items.
         /// </returns>
-        private List<Item> GetItems(CopyItemsArgs args)
+        private static List<Item> GetItems(CopyItemsArgs args)
         {
-            List<Item> list = new List<Item>();
-            Database database = GetDatabase(args);
-            foreach (string path in new ListString(args.Parameters["items"], '|'))
-            {
-                Item obj = database.GetItem(path);
-                if (obj != null)
-                    list.Add(obj);
-            }
-            return list;
+            var database = GetDatabase(args);
+
+            return new ListString(args.Parameters["items"], '|').Select(database.GetItem).Where(obj => obj != null).ToList();
         }
 
         /// <summary>
-        /// 
+        /// Fixes the data source.
         /// </summary>
-        /// <param name="originalItem"></param>
-        /// <param name="targetItem"></param>
-        private void FixDataSource(Item originalItem, Item targetItem, CopyItemsArgs args)
+        /// <param name="originalItem">
+        /// The original item.
+        /// </param>
+        /// <param name="targetItem">
+        /// The target item.
+        /// </param>
+        /// <param name="args">
+        /// The args.
+        /// </param>
+        private static void FixDataSource(Item originalItem, Item targetItem, CopyItemsArgs args)
         {
-            //get rendering and parsing xml 
-            if (targetItem != null)
+            if (targetItem == null)
             {
-                string renderingXml = targetItem["__Renderings"];
-                XmlDocument docXml = new XmlDocument();
-                if (!string.IsNullOrEmpty(renderingXml))
-                {
-                    docXml.LoadXml(renderingXml);
-                    XmlNodeList nodeList = docXml.SelectNodes("r/d/r");
-                    bool wasFound = false;
-                    foreach (XmlNode node in nodeList)
-                    {
-                        XmlAttributeCollection attributes = node.Attributes;
-                        if (attributes["s:ds"] != null)
-                        {
-                            string dataSourceValue = attributes["s:ds"].Value;
-                            if (!string.IsNullOrEmpty(dataSourceValue))
-                            {
-                                Item dataSourceItem = GetDatabase(args).GetItem(dataSourceValue);
+                return;
+            }
 
-                                if (dataSourceItem != null)
-                                {
-                                    //get relative path for spots,tab,accordeon,etc 
-                                    string relativePath = dataSourceItem.Paths.FullPath.Replace(originalItem.Paths.FullPath, "");
-                                    Item newdataSourceItem = GetDatabase(args).GetItem(targetItem.Paths.FullPath + relativePath);
-                                    if (newdataSourceItem != null)
-                                        attributes["s:ds"].Value = newdataSourceItem.ID.ToString();
-                                    wasFound = true;
-                                }
-                                else
-                                    attributes["s:ds"].Value = string.Empty;
-                            }
-                        }
-                    }
-                    using (new SecurityDisabler())
+            var renderingXml = targetItem["__Renderings"];
+            var docXml = new XmlDocument();
+            if (string.IsNullOrEmpty(renderingXml))
+            {
+                return;
+            }
+
+            docXml.LoadXml(renderingXml);
+            var nodeList = docXml.SelectNodes("r/d/r");
+            var wasFound = false;
+            if (nodeList != null)
+            {
+                foreach (XmlNode node in nodeList)
+                {
+                    var attributes = node.Attributes;
+                    if (attributes == null || (attributes["s:ds"] == null && attributes["ds"] == null))
                     {
-                        if (wasFound)
+                        continue;
+                    }
+
+                    var attributeName = attributes["s:ds"] != null ? "s:ds" : "ds";
+                    var dataSourceValue = attributes[attributeName].Value;
+                    if (string.IsNullOrEmpty(dataSourceValue))
+                    {
+                        continue;
+                    }
+
+                    var dataSourceItem = GetDatabase(args).GetItem(dataSourceValue);
+
+                    if (dataSourceItem != null)
+                    {
+                        var relativePath = dataSourceItem.Paths.FullPath.Replace(
+                            originalItem.Paths.FullPath,
+                            string.Empty);
+                        var newdataSourceItem = GetDatabase(args).GetItem(targetItem.Paths.FullPath + relativePath);
+                        if (newdataSourceItem != null)
                         {
-                            targetItem.Editing.BeginEdit();
-                            targetItem["__Renderings"] = docXml.InnerXml;
-                            targetItem.Editing.EndEdit();
+                            attributes[attributeName].Value = newdataSourceItem.ID.ToString();
                         }
+
+                        wasFound = true;
+                    }
+                    else
+                    {
+                        attributes[attributeName].Value = string.Empty;
                     }
                 }
+            }
+
+            if (!wasFound)
+            {
+                return;
+            }
+
+            using (new SecurityDisabler())
+            {
+                targetItem.Editing.BeginEdit();
+                targetItem["__Renderings"] = docXml.InnerXml;
+                targetItem.Editing.EndEdit();
             }
         }
     }
