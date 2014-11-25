@@ -23,37 +23,36 @@ namespace Nemetos.DeepCopy.Events
         /// <param name="args">The arguments.</param><contract><requires name="args" condition="not null"/></contract>
         public virtual void Execute(CopyItemsArgs args)
         {
-            Assert.ArgumentNotNull((object)args, "args");
-            Item destination = GetDatabase(args).GetItem(args.Parameters["destination"]);
-            Assert.IsNotNull((object)destination, args.Parameters["destination"]);
-            ArrayList arrayList = new ArrayList();
-            List<Item> items = GetItems(args);
-            string str = ((object)destination.Uri).ToString();
-            foreach (Item obj1 in items)
+            Assert.ArgumentNotNull(args, "args");
+            var destination = GetDatabase(args).GetItem(args.Parameters["destination"]);
+            Assert.IsNotNull(destination, args.Parameters["destination"]);
+
+            var items = GetItems(args);
+            var str = destination.Uri.ToString();
+            for (var i = 0; i < items.Count && i < args.Copies.Count(); i++)
             {
-                if (obj1 != null)
+                var originalItem = items[i];
+                var copyItem = args.Copies[i];
+
+                if (originalItem == null || copyItem == null)
                 {
-                    Log.Audit((object)this, "Copy item: {0}", AuditFormatter.FormatItem(obj1), str);
-                    var currentItem = obj1;
-                    Item[] childItems = obj1.Axes.GetDescendants();
-                    FixDataSource(currentItem, destination.Children[obj1.Name], args);
-                    foreach (var item in childItems)
-                    {
-                        // path of the item that will be copy
-                        string itemPath = item.Paths.FullPath;
-                        //parent of the root item that will copy
-                        string currentPath = currentItem.Paths.FullPath;
-                        // destination item path
-                        string destinationPath = destination.Paths.FullPath;
-                        //relative path to the root parent
-                        string relativePath = obj1.Name + itemPath.Replace(currentPath, "");
-                        // item copied  
-                        var relativeItem = GetDatabase(args).GetItem(destinationPath + "/" + relativePath);
-                        FixDataSource(item, relativeItem, args);
-                    }
+                    continue;
+                }
+
+                Log.Audit(this, "Copy item: {0}", AuditFormatter.FormatItem(originalItem), str);
+
+                FixDataSource(originalItem, copyItem, args);
+
+                var originalChildren = originalItem.Axes.GetDescendants();
+                var copyChildren = copyItem.Axes.GetDescendants();
+
+                for (var j = 0; j < originalChildren.Count() && j < copyChildren.Count(); j++)
+                {
+                    FixDataSource(originalChildren[j], copyChildren[j], args);
                 }
             }
-            args.Copies = arrayList.ToArray(typeof(Item)) as Item[];
+
+            args.Copies = new ArrayList().ToArray(typeof(Item)) as Item[];
         }
         /// <summary>
         /// Return the current Database 
